@@ -2,17 +2,21 @@ package com.example.tajbih;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.Layout;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    Button clickButton, resetButton, newLapButton, newDollerButton;
+    Button addButton, resetButton, newLapButton, newDollerButton,lapButton,dollerButton,subButton;
     TextView counterView, lapView, dollerView;
+    LinearLayout lapLayout, dollerLayout;
 
     int counter = 0, lap = 0, doller = 0;
 
@@ -33,20 +37,25 @@ public class MainActivity extends AppCompatActivity {
         lap = sharedPreferences.getInt("lap", 0);
         doller = sharedPreferences.getInt("doller", 0);
 
-        clickButton = findViewById(R.id.clickButton);
+        addButton = findViewById(R.id.addButton);
         resetButton = findViewById(R.id.resetButton);
         counterView = findViewById(R.id.counterView);
         newLapButton = findViewById(R.id.newLapButton);
         lapView = findViewById(R.id.lapView);
         dollerView = findViewById(R.id.dollerView);
         newDollerButton = findViewById(R.id.newDollerButton);
+        lapButton = findViewById(R.id.lapButton);
+        dollerButton = findViewById(R.id.dollerButton);
+        lapLayout = findViewById(R.id.lapLayout);
+        dollerLayout = findViewById(R.id.dollLayout);
+        subButton = findViewById(R.id.subButton);
 
         // Set views to restored values
         counterView.setText(String.valueOf(counter));
         lapView.setText(String.valueOf(lap));
         dollerView.setText(String.valueOf(doller));
 
-        clickButton.setOnClickListener(new View.OnClickListener() {
+        addButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 counter++;
@@ -63,6 +72,29 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 // Save updated values
+                editor.putInt("counter", counter);
+                editor.putInt("lap", lap);
+                editor.putInt("doller", doller);
+                editor.apply();
+            }
+        });
+
+        subButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(counter!=0) {
+                    counter--;
+                    if(counter%38==37&&doller>0)
+                    {
+                        doller--;
+                        dollerView.setText(String.valueOf(doller));
+                    }
+                }
+                else{
+                    Toast.makeText(MainActivity.this,"Counter is already zero",Toast.LENGTH_SHORT).show();
+                }
+                counterView.setText(String.valueOf(counter));
+
                 editor.putInt("counter", counter);
                 editor.putInt("lap", lap);
                 editor.putInt("doller", doller);
@@ -103,6 +135,22 @@ public class MainActivity extends AppCompatActivity {
                 // Save reset value
                 editor.putInt("doller", doller);
                 editor.apply();
+            }
+        });
+
+        lapButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                lapLayout.setVisibility(View.VISIBLE);
+                dollerLayout.setVisibility(View.GONE);
+            }
+        });
+
+        dollerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                lapLayout.setVisibility(View.GONE);
+                dollerLayout.setVisibility(View.VISIBLE);
             }
         });
     }
