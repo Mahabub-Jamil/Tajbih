@@ -1,24 +1,26 @@
 package com.example.tajbih;
 
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.text.Layout;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
-import android.widget.LinearLayout;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    Button addButton, resetButton, newLapButton, newDollerButton,lapButton,dollerButton,subButton;
-    TextView counterView, lapView, dollerView;
-    LinearLayout lapLayout, dollerLayout;
+    Button addButton, resetButton, restartLapButton, setButton, subButton;
+    TextView counterView, lapsCompletedView;
+    EditText inputLap;
 
-    int counter = 0, lap = 0, doller = 0;
+    int counter = 0, lapGoal = 1, lapsCompleted = 0;
 
     SharedPreferences sharedPreferences;
     SharedPreferences.Editor editor;
@@ -26,7 +28,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
         sharedPreferences = getSharedPreferences("TajbihPrefs", MODE_PRIVATE);
@@ -34,124 +35,166 @@ public class MainActivity extends AppCompatActivity {
 
         // Restore saved data
         counter = sharedPreferences.getInt("counter", 0);
-        lap = sharedPreferences.getInt("lap", 0);
-        doller = sharedPreferences.getInt("doller", 0);
+        lapGoal = sharedPreferences.getInt("lapGoal", 1);
+        lapsCompleted = sharedPreferences.getInt("lapsCompleted", 0);
 
+        // Initialize Views
         addButton = findViewById(R.id.addButton);
         resetButton = findViewById(R.id.resetButton);
         counterView = findViewById(R.id.counterView);
-        newLapButton = findViewById(R.id.newLapButton);
-        lapView = findViewById(R.id.lapView);
-        dollerView = findViewById(R.id.dollerView);
-        newDollerButton = findViewById(R.id.newDollerButton);
-        lapButton = findViewById(R.id.lapButton);
-        dollerButton = findViewById(R.id.dollerButton);
-        lapLayout = findViewById(R.id.lapLayout);
-        dollerLayout = findViewById(R.id.dollLayout);
+        restartLapButton = findViewById(R.id.restartLapButton);
         subButton = findViewById(R.id.subButton);
+        setButton = findViewById(R.id.setButton);
+        inputLap = findViewById(R.id.inputLap);  // Ensure inputLap matches your XML id
+        lapsCompletedView = findViewById(R.id.lapsCompletedView);  // Ensure lapsCompletedView matches your XML id
 
         // Set views to restored values
         counterView.setText(String.valueOf(counter));
-        lapView.setText(String.valueOf(lap));
-        dollerView.setText(String.valueOf(doller));
+        lapsCompletedView.setText(String.valueOf(lapsCompleted));
+        inputLap.setHint("Lap Goal: " + lapGoal);  // Set the hint to the current lap goal
 
+        // Set Button - Set Lap Goal
+        setButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+               setLapGoal();
+               hideKeyboard(v);
+            }
+        });
+
+        inputLap.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
+                    setLapGoal();
+                    // Hide the keyboard
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add Button - Increase Counter
         addButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                counter++;
-                counterView.setText(String.valueOf(counter));
+                if (counter < 9999) {
+                    counter++;
+                    counterView.setText(String.valueOf(counter));
 
-                if (counter % 33 == 0) {
-                    lap++;
-                    lapView.setText(String.valueOf(lap));
+                    // Check if a lap is completed
+                    if (counter % lapGoal == 0) {
+                        lapsCompleted++;
+                        lapsCompletedView.setText(String.valueOf(lapsCompleted));
+
+                        // Save laps completed
+                        editor.putInt("lapsCompleted", lapsCompleted);
+                        editor.apply();
+
+                    }
+
+                    // Save updated counter
+                    editor.putInt("counter", counter);
+                    editor.apply();
+                } else {
+                    Toast.makeText(MainActivity.this, "Counter has reached its maximum value of 9999.", Toast.LENGTH_SHORT).show();
                 }
-
-                if (counter % 38 == 0) {
-                    doller++;
-                    dollerView.setText(String.valueOf(doller));
-                }
-
-                // Save updated values
-                editor.putInt("counter", counter);
-                editor.putInt("lap", lap);
-                editor.putInt("doller", doller);
-                editor.apply();
             }
         });
 
+        // Subtract Button - Decrease Counter
         subButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(counter!=0) {
+                if (counter > 0) {
                     counter--;
-                    if(counter%38==37&&doller>0)
-                    {
-                        doller--;
-                        dollerView.setText(String.valueOf(doller));
-                    }
-                }
-                else{
-                    Toast.makeText(MainActivity.this,"Counter is already zero",Toast.LENGTH_SHORT).show();
-                }
-                counterView.setText(String.valueOf(counter));
 
-                editor.putInt("counter", counter);
-                editor.putInt("lap", lap);
-                editor.putInt("doller", doller);
-                editor.apply();
+                    // Check if we need to adjust laps completed
+                    if ((counter + 1) % lapGoal == 0 && lapsCompleted > 0) {
+                        lapsCompleted--;
+                        lapsCompletedView.setText(String.valueOf(lapsCompleted));
+
+                        // Save laps completed
+                        editor.putInt("lapsCompleted", lapsCompleted);
+                        editor.apply();
+                    }
+
+                    counterView.setText(String.valueOf(counter));
+
+                    // Save updated counter
+                    editor.putInt("counter", counter);
+                    editor.apply();
+                } else {
+                    Toast.makeText(MainActivity.this, "Counter is already zero.", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
+        // Reset Button - Reset Counter
         resetButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 counter = 0;
                 counterView.setText(String.valueOf(counter));
 
-                // Save reset value
+                // Save reset values
                 editor.putInt("counter", counter);
+                editor.putInt("lapsCompleted", lapsCompleted);
                 editor.apply();
             }
         });
 
-        newLapButton.setOnClickListener(new View.OnClickListener() {
+        // Restart Lap Button - Reset Laps Completed
+        restartLapButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                lap = 0;
-                lapView.setText(String.valueOf(lap));
+                lapsCompleted = 0;
+                lapsCompletedView.setText(String.valueOf(lapsCompleted));
 
-                // Save reset value
-                editor.putInt("lap", lap);
+                // Save reset laps completed
+                editor.putInt("lapsCompleted", lapsCompleted);
                 editor.apply();
             }
         });
 
-        newDollerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                doller = 0;
-                dollerView.setText(String.valueOf(doller));
+    }
+    private void setLapGoal() {
+        String lapInput = inputLap.getText().toString();
+        if (lapInput.isEmpty()) {
+            Toast.makeText(MainActivity.this, "Please enter a lap goal.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-                // Save reset value
-                editor.putInt("doller", doller);
-                editor.apply();
+        try {
+            lapGoal = Integer.parseInt(lapInput);
+            if (lapGoal <= 0) {
+                Toast.makeText(MainActivity.this, "Lap goal must be greater than 0.", Toast.LENGTH_SHORT).show();
+                lapGoal = 1;  // Reset to default
+                return;
             }
-        });
+        } catch (NumberFormatException e) {
+            Toast.makeText(MainActivity.this, "Invalid lap goal. Please enter a number.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        lapButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                lapLayout.setVisibility(View.VISIBLE);
-                dollerLayout.setVisibility(View.GONE);
-            }
-        });
+        // Set lap goal hint
+        inputLap.setHint("Set lap: " + lapGoal);
 
-        dollerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                lapLayout.setVisibility(View.GONE);
-                dollerLayout.setVisibility(View.VISIBLE);
-            }
-        });
+        // Save lap goal
+        editor.putInt("lapGoal", lapGoal);
+        editor.apply();
+
+        inputLap.setText("");  // Clear the input field
+    }
+
+    private void hideKeyboard(View view) {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
 }
